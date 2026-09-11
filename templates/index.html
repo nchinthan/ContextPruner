@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AI Prompt Builder</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<!-- Correct absolute static path -->
+        <script type="module" src="{{ url_for('static', filename='js/index_page/main.js') }}"></script>
+
+<style>
+            /* Custom Scrollbar for sleek UI */
+            ::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #1f2937;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #4b5563;
+                border-radius: 3px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #6b7280;
+            }
+        </style>
+    </head>
+    <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col font-sans">
+        <!-- Header -->
+        <app-header title="Prompt Workspace"></app-header>
+
+        <main class="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col gap-6">
+            <project-init></project-init>
+
+            <prompt-editor></prompt-editor>
+        </main>
+
+        <output-modal></output-modal>
+    </body>
+</html>
