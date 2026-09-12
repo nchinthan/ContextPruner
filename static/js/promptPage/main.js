@@ -9,22 +9,44 @@ import './ui/treeView.js';
 const API_BASE = '/prompts';
 let activePath = '';
 
-// Instantiate API service
 const promptApi = new PromptApi(API_BASE);
-window.promptApi = promptApi; // Kept for debugging only - UI components no longer touch this
+window.promptApi = promptApi;
 
-// --- Element handles (plain markup, not custom elements, so getElementById is fine) ---
 let treeViewEl;
 let createModalEl;
 let scriptEditorEl;
+let editorEmptyContainer;
+let editorMainContainer;
 
 function getEls() {
   treeViewEl = document.querySelector('tree-view');
-  createModalEl = document.getElementById('create-modal');
+  createModalEl = document.querySelector('prompt-create-modal');
   scriptEditorEl = document.querySelector('prompt-script-editor');
+  
+  editorEmptyContainer = document.getElementById('editor-empty');
+  // Get the parent container surrounding the toolbar & editor component
+  editorMainContainer = scriptEditorEl?.closest('div.hidden') || scriptEditorEl?.parentElement;
 }
 
-// --- Data layer: builds a fully-resolved tree so UI never has to call the API itself ---
+function setNodeHeaderInfo(data, path) {
+  const nameEl = document.getElementById('current-node-name');
+  const badgeEl = document.getElementById('current-node-badge');
+  const pathEl = document.getElementById('current-node-path');
+
+  if (nameEl) nameEl.innerText = data.name || 'Root';
+  if (badgeEl) badgeEl.innerText = data.leaf ? 'Leaf' : `Branch (${data.children?.length || 0})`;
+  if (pathEl) pathEl.innerText = path ? `/${path}` : '/ (Root)';
+}
+
+function showMainEditor() {
+  if (editorEmptyContainer) editorEmptyContainer.classList.add('hidden');
+  if (editorMainContainer) editorMainContainer.classList.remove('hidden');
+}
+
+function hideMainEditor() {
+  if (editorMainContainer) editorMainContainer.classList.add('hidden');
+  if (editorEmptyContainer) editorEmptyContainer.classList.remove('hidden');
+}
 
 async function fetchNodeTree(path) {
   const data = await promptApi.getNode(path);
@@ -50,31 +72,25 @@ async function fetchTree() {
   try {
     const rootTree = await fetchNodeTree('');
     updateStatus('Connected', 'emerald');
-    treeViewEl.render(rootTree, activePath);
+    if (treeViewEl) treeViewEl.render(rootTree, activePath);
   } catch (err) {
     updateStatus('Disconnected', 'red');
     console.error('Failed to load tree', err);
   }
 }
 
-window.fetchTree = fetchTree; // Kept for debugging
-
-// --- Business actions ---
-
 async function selectNode(path) {
   try {
     const data = await promptApi.getNode(path);
     activePath = path;
 
-    document.getElementById('editor-empty').classList.add('hidden');
-    document.getElementById('editor-container').classList.remove('hidden');
+    showMainEditor();
+    setNodeHeaderInfo(data, path);
 
-    document.getElementById('current-node-name').innerText = data.name || 'Root';
-    document.getElementById('current-node-path').innerText = path ? `/${path}` : '/ (Root)';
-    document.getElementById('current-node-badge').innerText = data.leaf ? 'Leaf' : `Branch (${data.children?.length || 0})`;
-    scriptEditorEl.value = data.script || '';
+    if (scriptEditorEl) {
+      scriptEditorEl.value = data.script || '';
+    }
 
-    // Re-render the tree so the newly active node gets highlighted
     fetchTree();
   } catch (err) {
     alert('Error loading target node: ' + err.message);
@@ -86,7 +102,7 @@ async function saveCurrentNodeScript() {
     alert('Root configuration script updates not allowed via path operation.');
     return;
   }
-  const newScript = scriptEditorEl.value;
+  const newScript = scriptEditorEl ? scriptEditorEl.value : '';
 
   try {
     await promptApi.updateNodeScript(activePath, newScript);
@@ -107,9 +123,7 @@ async function deleteCurrentNode() {
 
   try {
     await promptApi.deleteNode(activePath);
-
-    document.getElementById('editor-container').classList.add('hidden');
-    document.getElementById('editor-empty').classList.remove('hidden');
+    hideMainEditor();
     activePath = '';
     fetchTree();
   } catch (err) {
@@ -125,8 +139,7 @@ async function submitNewNode(parentPath, name, script) {
 
   try {
     await promptApi.createNode(parentPath, name, script);
-
-    createModalEl.close();
+    if (createModalEl) createModalEl.close();
     fetchTree();
     if (parentPath) selectNode(parentPath);
   } catch (err) {
@@ -135,11 +148,10 @@ async function submitNewNode(parentPath, name, script) {
 }
 
 function openCreateModalFromCurrent() {
-  createModalEl.open(activePath);
+  if (createModalEl) createModalEl.open(activePath);
 }
 
 async function moveNode(sourcePath, targetParentPath) {
-  // Tree-hierarchy validation lives here, not in the UI component.
   if (!sourcePath) return;
   if (sourcePath === targetParentPath) return;
   if (targetParentPath.startsWith(sourcePath + '/')) {
@@ -173,43 +185,39 @@ function exportTreeJSON() {
 }
 
 function updateStatus(text, color) {
-  const el = document.getElementById('api-status');
-  el.innerText = text;
-  el.className = `text-xs px-2 py-0.5 rounded-full bg-${color}-500/10 text-${color}-400 border border-${color}-500/20`;
+  const appHeader = document.querySelector('app-header');
+  if (appHeader && typeof appHeader.setConnectionStatus === 'function') {
+    appHeader.setConnectionStatus(
+      color !== 'red',
+      text,
+      `${
+        color === 'yellow'
+          ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20'
+          : color === 'red'
+          ? 'bg-red-500/20 text-red-400 border border-red-500/20'
+          : color === 'emerald'
+          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
+          : ''
+      }`
+    );
+  }
 }
 
-window.updateStatus = updateStatus; // Kept for debugging
-
-// --- Wiring: translate UI events into business actions ---
-
 function wireEvents() {
-  // Delegated on document so it works regardless of where in the tree
-  // the event originated (dynamically-created prompt-node elements included).
-  document.addEventListener('node-select', (e) => {
-    selectNode(e.detail.path);
-  });
-
-  document.addEventListener('node-add-child', (e) => {
-    createModalEl.open(e.detail.path);
-  });
-
-  document.addEventListener('node-move', (e) => {
-    moveNode(e.detail.sourcePath, e.detail.targetPath);
-  });
-
-  document.addEventListener('tree-export', () => {
-    exportTreeJSON();
-  });
-
+  document.addEventListener('node-select', (e) => selectNode(e.detail.path));
+  document.addEventListener('node-add-child', (e) => createModalEl?.open(e.detail.path));
+  document.addEventListener('node-move', (e) => moveNode(e.detail.sourcePath, e.detail.targetPath));
+  document.addEventListener('tree-export', () => exportTreeJSON());
   document.addEventListener('node-create', (e) => {
     const { parentPath, name, script } = e.detail;
     submitNewNode(parentPath, name, script);
   });
 }
 
-// --- Init ---
-
 function init() {
+  getEls();
+  wireEvents();
+
   document.getElementById("btn-refresh-tree")?.addEventListener("click", () => {
     if (typeof fetchTree === "function") {
       fetchTree();
@@ -245,9 +253,6 @@ function init() {
     }
   });
 
-  getEls();
-  wireEvents();
-
   const btnSave = document.getElementById('btn-save-script');
   if (btnSave) btnSave.addEventListener('click', saveCurrentNodeScript);
 
@@ -256,7 +261,6 @@ function init() {
 
   const btnAddChild = document.getElementById('btn-add-child-current');
   if (btnAddChild) btnAddChild.addEventListener('click', openCreateModalFromCurrent);
-
   fetchTree();
 }
 

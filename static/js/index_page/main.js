@@ -11,17 +11,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const editor = document.querySelector('prompt-editor');
 
+  const appHeader = document.querySelector('app-header');
+
   SocketObject.onConnect(() => {
-    document.getElementById("status-indicator").className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
-    document.getElementById("status-text").innerText = "Connected";
+    appHeader.setConnectionStatus(true);
   });
 
   SocketObject.onDisconnect(() => {
-    document.getElementById("status-indicator").className = "w-3 h-3 rounded-full bg-red-500";
-    document.getElementById("status-text").innerText = "Disconnected";
+    appHeader.setConnectionStatus(false);
     isSessionReady = false;
   });
-
+  
   SocketObject.SessionInit.success(({ root }) => {
     isSessionReady = true;
     const msg = document.getElementById("session-message");

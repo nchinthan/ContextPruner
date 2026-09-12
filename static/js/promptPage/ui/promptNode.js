@@ -7,20 +7,6 @@ class PromptNode extends HTMLElement {
     this.activePath = '';
   }
 
-  /**
-   * Public render API. `nodeTree` must already contain resolved children
-   * (nodeTree.childNodes: same shape, recursively) - this component never
-   * fetches data itself, it only draws what it's given.
-   *
-   * Expected shape:
-   * {
-   *   path: string,
-   *   name: string,
-   *   leaf: boolean,
-   *   children: string[]   // original child names, only used for the count badge
-   *   childNodes: [ ...same shape... ]
-   * }
-   */
   setData(nodeTree, activePath = '') {
     this.nodeData = nodeTree;
     this.path = nodeTree.path ?? '';
@@ -64,20 +50,24 @@ class PromptNode extends HTMLElement {
 
     rowEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.dispatchEvent(new CustomEvent('node-select', {
-        detail: { path: this.path },
-        bubbles: true,
-        composed: true,
-      }));
+      this.dispatchEvent(
+        new CustomEvent('node-select', {
+          detail: { path: this.path },
+          bubbles: true,
+          composed: true,
+        })
+      );
     });
 
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.dispatchEvent(new CustomEvent('node-add-child', {
-        detail: { path: this.path },
-        bubbles: true,
-        composed: true,
-      }));
+      this.dispatchEvent(
+        new CustomEvent('node-add-child', {
+          detail: { path: this.path },
+          bubbles: true,
+          composed: true,
+        })
+      );
     });
 
     if (this.path !== '') {
@@ -101,8 +91,6 @@ class PromptNode extends HTMLElement {
     }
   }
 
-  // --- Drag & Drop: purely reports intent, no path-hierarchy business rules ---
-
   handleDragStart(e) {
     e.stopPropagation();
     e.dataTransfer.setData('application/json', JSON.stringify({ path: this.path, name: this.nodeData.name }));
@@ -110,7 +98,7 @@ class PromptNode extends HTMLElement {
   }
 
   handleDragOver(e) {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
     this.querySelector('.node-row').classList.add('bg-indigo-900/30', 'ring-1', 'ring-indigo-500');
@@ -130,18 +118,18 @@ class PromptNode extends HTMLElement {
     try {
       sourceData = JSON.parse(e.dataTransfer.getData('application/json'));
     } catch (err) {
-      return; // Not a drag payload we understand
+      return;
     }
 
     if (!sourceData || !sourceData.path) return;
 
-    // Report the raw intent; main.js owns the tree-hierarchy validation
-    // (e.g. "can't drop a folder into its own child") and the API calls.
-    this.dispatchEvent(new CustomEvent('node-move', {
-      detail: { sourcePath: sourceData.path, targetPath: this.path },
-      bubbles: true,
-      composed: true,
-    }));
+    this.dispatchEvent(
+      new CustomEvent('node-move', {
+        detail: { sourcePath: sourceData.path, targetPath: this.path },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 }
 

@@ -9,7 +9,7 @@ class AppHeader extends HTMLElement {
     // 1. Move slotted/child nodes out temporarily into an array
     const customActions = Array.from(this.children);
 
-    // 2. Render internal structure
+    // 2. Render internal structure with status indicator in top-right
     this.innerHTML = `
       <header class="h-14 border-b border-gray-800 bg-gray-900 px-6 flex items-center justify-between shadow-md shrink-0">
         <div class="flex items-center gap-6">
@@ -28,14 +28,21 @@ class AppHeader extends HTMLElement {
             <button id="suggestions-toggle" type="button" class="px-3 py-1.5 text-xs font-medium rounded-lg text-gray-300 hover:bg-gray-800 bg-gray-800/60 transition">Suggestions</button>
           </nav>
         </div>
-        <div id="header-actions" class="flex items-center gap-3"></div>
+        <div id="header-actions" class="flex items-center gap-3">
+          <!-- Connection Status Indicator -->
+          <div id="status-container" class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-800/80 border border-gray-700/50">
+            <span id="status-indicator" class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+            <span id="status-text" class="text-xs font-medium text-gray-300">Disconnected</span>
+          </div>
+        </div>
       </header>
     `;
 
-    // 3. Append safely without infinite while loops
+    // 3. Append custom actions safely
     const targetContainer = this.querySelector('#header-actions');
     customActions.forEach(el => targetContainer.appendChild(el));
 
+    // Suggestions setup
     const suggestionsToggle = this.querySelector('#suggestions-toggle');
     const suggestionForm = document.createElement('form');
     suggestionForm.className = 'hidden fixed right-6 top-16 z-10 flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-900 p-2 shadow-lg';
@@ -73,6 +80,36 @@ class AppHeader extends HTMLElement {
       }
     });
   }
+
+  // --- PUBLIC API METHODS ---
+  setConnectionStatus(isConnected, customText,customStyle=null) {
+    if (customStyle) {
+      this.setIndicatorState(customStyle);
+    }else {
+      this.setIndicatorState(
+        isConnected ? 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse' : 'w-2.5 h-2.5 rounded-full bg-red-500'
+      );
+    }
+    this.setIndicatorState(
+      isConnected ? 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse' : 'w-2.5 h-2.5 rounded-full bg-red-500'
+    );
+    this.setStatusText(customText || (isConnected ? 'Connected' : 'Disconnected'));
+  }
+
+  setStatusText(text) {
+    const textEl = this.querySelector('#status-text');
+    if (textEl) textEl.innerText = text;
+  }
+
+  /**
+   * Sets CSS classes on the status indicator dot directly.
+   * @param {string} className 
+   */
+  setIndicatorState(className) {
+    const indicator = this.querySelector('#status-indicator');
+    if (indicator) indicator.className = className;
+  }
+
 }
 
 customElements.define('app-header', AppHeader);
