@@ -1,7 +1,7 @@
 class PromptEditor extends HTMLElement {
   constructor() {
     super();
-    const EditorPlaceholder ="Write your prompt here... For example:\nPlease review this code structure:\nfile:src/dataInterface/API.js/ApiClient";
+    const EditorPlaceholder = "Write your prompt here... For example:\nPlease review this code structure:\nfile:src/dataInterface/API.js/ApiClient";
     this.className = "bg-gray-900 border border-gray-800 rounded-xl p-5 flex-1 flex flex-col shadow-lg relative";
     this.innerHTML = `
         <div class="flex justify-between items-center mb-3">
@@ -64,62 +64,62 @@ class PromptEditor extends HTMLElement {
             </div>
         </div>
     `;
-    this.dropdown = this.querySelector('.prompt-autocomplete-dropdown');
+
     this.suggestions = [];
     this.selectedIndex = 0;
     this.activeFileMatch = null;
     this.activePromptMatch = null;
-    this.promptBuildBtn = this.querySelector('.prompt-build-btn');
-    this.promptCopyBtn = this.querySelector('.prompt-copy-btn');
   }
 
+  // --- Element Getters ---
+  get textarea() { return this.querySelector('.prompt-textarea'); }
+  get dropdown() { return this.querySelector('.prompt-autocomplete-dropdown'); }
+  get promptBuildBtn() { return this.querySelector('.prompt-build-btn'); }
+  get promptCopyBtn() { return this.querySelector('.prompt-copy-btn'); }
+  get copyStatus() { return this.querySelector('.prompt-copy-status'); }
+
   get value() {
-    const textarea = this.querySelector('.prompt-textarea');
-    return textarea ? textarea.value : '';
+    return this.textarea ? this.textarea.value : '';
   }
 
   set value(val) {
-    const textarea = this.querySelector('.prompt-textarea');
-    if (textarea) textarea.value = val;
+    if (this.textarea) this.textarea.value = val;
   }
 
   // --- Exposed APIs for Event Listeners ---
 
   onBuild(callback) {
-    const btn = this.querySelector('.prompt-build-btn');
-    if (btn) btn.addEventListener('click', callback);
+    this.promptBuildBtn?.addEventListener('click', callback);
   }
 
   onCopy(callback) {
-    const btn = this.querySelector('.prompt-copy-btn');
-    if (btn) btn.addEventListener('click', callback);
+    this.promptCopyBtn?.addEventListener('click', callback);
   }
 
   onInput(callback) {
-    const textarea = this.querySelector('.prompt-textarea');
-    if (textarea) textarea.addEventListener('input', callback);
+    this.textarea?.addEventListener('input', callback);
   }
 
   onKeydown(callback) {
-    const textarea = this.querySelector('.prompt-textarea');
-    if (textarea) textarea.addEventListener('keydown', callback);
+    this.textarea?.addEventListener('keydown', callback);
   }
 
-  // --- Helper API to get/set values or elements if needed ---
+  // --- Helper API to get/set values ---
 
   getValue() {
-    const textarea = this.querySelector('.prompt-textarea');
-    return textarea ? textarea.value : '';
+    return this.value;
   }
 
   setValue(val) {
-    const textarea = this.querySelector('.prompt-textarea');
-    if (textarea) textarea.value = val;
+    this.value = val;
   }
 
   showDropdown(items) {
+    const dropdown = this.dropdown;
+    if (!dropdown) return;
+
     this.selectedIndex = 0;
-    this.dropdown.innerHTML = "";
+    dropdown.innerHTML = "";
     
     items.forEach((item, index) => {
       const li = document.createElement("li");
@@ -131,22 +131,25 @@ class PromptEditor extends HTMLElement {
         e.preventDefault();
         applySelection(item);
       };
-      this.dropdown.appendChild(li);
+      dropdown.appendChild(li);
     });
 
-    this.dropdown.classList.remove("hidden");
-    this.dropdown.style.left = `1rem`;
-    this.dropdown.style.bottom = `4rem`;
+    dropdown.classList.remove("hidden");
+    dropdown.style.left = `1rem`;
+    dropdown.style.bottom = `4rem`;
   }
 
   hideDropdown() {
-    this.dropdown.classList.add("hidden");
+    if (this.dropdown) {
+      this.dropdown.classList.add("hidden");
+    }
     this.suggestions = [];
     this.activeFileMatch = null;
     this.activePromptMatch = null;
   }
 
   updateSelectionVisuals() {
+    if (!this.dropdown) return;
     const items = this.dropdown.querySelectorAll("li");
     items.forEach((li, idx) => {
       if (idx === this.selectedIndex) {
@@ -159,7 +162,7 @@ class PromptEditor extends HTMLElement {
   }
 
   showCopyStatus() {
-    const status = this.querySelector('.prompt-copy-status');
+    const status = this.copyStatus;
     if (status) {
       status.classList.remove('hidden');
       setTimeout(() => {
@@ -168,4 +171,5 @@ class PromptEditor extends HTMLElement {
     }
   }
 }
+
 customElements.define("prompt-editor", PromptEditor);

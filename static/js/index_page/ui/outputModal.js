@@ -1,4 +1,3 @@
-// File: static/js/index_page/ui/outputModal.js
 class OutputModal extends HTMLElement {
   constructor() {
     super();
@@ -50,17 +49,22 @@ class OutputModal extends HTMLElement {
     `;
   }
 
+  // --- Element Getters (cached per DOM query on demand inside component scope) ---
+  get editor() { return this.querySelector('#modal-editor'); }
+  get wordCountBadge() { return this.querySelector('#modal-word-count'); }
+  get copyStatus() { return this.querySelector('#modal-copy-status'); }
+  get btnClose() { return this.querySelector('#btn-close'); }
+  get btnCloseX() { return this.querySelector('#btn-close-x'); }
+  get btnCopy() { return this.querySelector('#btn-copy'); }
+
   connectedCallback() {
     // Attach scoped event listeners after component mounts
-    document.getElementById("btn-close").addEventListener("click", () => this.closeModal());
-    document.getElementById("btn-close-x").addEventListener("click", () => this.closeModal());
-    document.getElementById("btn-copy").addEventListener("click", () => this.copyModalContent());
+    this.btnClose?.addEventListener("click", () => this.closeModal());
+    this.btnCloseX?.addEventListener("click", () => this.closeModal());
+    this.btnCopy?.addEventListener("click", () => this.copyModalContent());
 
     // Recalculate word count live if user edits inside the textarea
-    const textarea = document.getElementById("modal-editor");
-    if (textarea) {
-      textarea.addEventListener("input", (e) => this.updateWordCountDisplay(e.target.value));
-    }
+    this.editor?.addEventListener("input", (e) => this.updateWordCountDisplay(e.target.value));
   }
 
   openModal() {
@@ -69,22 +73,20 @@ class OutputModal extends HTMLElement {
 
   closeModal() {
     this.classList.add("hidden");
-    const status = document.getElementById("modal-copy-status");
+    const status = this.copyStatus;
     if (status) status.classList.add("hidden");
   }
 
   calculateWordCount(text) {
     if (!text) return 0;
-    // Replace non-alphanumeric characters with space, split by whitespace, and ignore empty strings
     return text.replace(/[^a-zA-Z0-9]/g, " ").split(/\s+/).filter(Boolean).length;
   }
 
   updateWordCountDisplay(text) {
     const count = this.calculateWordCount(text);
-    const badge = document.getElementById("modal-word-count");
+    const badge = this.wordCountBadge;
 
     if (badge) {
-      // Reset all word-count styles
       badge.classList.remove(
         "text-green-400",
         "text-yellow-400",
@@ -114,14 +116,12 @@ class OutputModal extends HTMLElement {
       }
 
       badge.classList.add(colorClass);
-
-      badge.textContent =
-        `${count.toLocaleString()} ${count === 1 ? "word" : "words"} · ${label}`;
+      badge.textContent = `${count.toLocaleString()} ${count === 1 ? "word" : "words"} · ${label}`;
     }
   }
 
   setContent(text) {
-    const textarea = document.getElementById("modal-editor");
+    const textarea = this.editor;
     if (textarea) {
       textarea.value = text;
       this.updateWordCountDisplay(text);
@@ -129,12 +129,12 @@ class OutputModal extends HTMLElement {
   }
 
   async copyModalContent() {
-    const textarea = document.getElementById("modal-editor");
+    const textarea = this.editor;
     const text = textarea ? textarea.value : "";
     
     await navigator.clipboard.writeText(text);
 
-    const status = document.getElementById("modal-copy-status");
+    const status = this.copyStatus;
     if (status) {
       status.classList.remove("hidden");
       setTimeout(() => status.classList.add("hidden"), 3000);
