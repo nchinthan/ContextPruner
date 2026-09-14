@@ -1,3 +1,4 @@
+// File: static/js/index_page/ui/projectInitialize.js
 class ProjectInit extends HTMLElement {
   constructor() {
     super();
@@ -13,7 +14,7 @@ class ProjectInit extends HTMLElement {
           />
           <button
               id="init-btn"
-              class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-5 py-2 rounded-lg text-sm transition shadow-md hover:shadow-indigo-500/20"
+              class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-5 py-2 rounded-lg text-sm transition shadow-md hover:shadow-indigo-500/20 text-nowrap"
           >
               Initialize Workspace
           </button>
@@ -27,14 +28,26 @@ class ProjectInit extends HTMLElement {
   get initBtn() { return this.querySelector('#init-btn'); }
   get sessionMessage() { return this.querySelector('#session-message'); }
 
+  // --- Helper Methods ---
+  triggerInit() {
+    const path = this.rootPathInput?.value.trim() || "";
+    window.dispatchEvent(new CustomEvent("project-init", {
+      detail: { path },
+      bubbles: true,
+      composed: true
+    }));
+  }
+
   connectedCallback() {
-    this.initBtn?.addEventListener('click', () => {
-      const path = this.rootPathInput?.value.trim() || "";
-      window.dispatchEvent(new CustomEvent("project-init", {
-        detail: { path },
-        bubbles: true,
-        composed: true
-      }));
+    // Dispatch event on button click
+    this.initBtn?.addEventListener('click', () => this.triggerInit());
+
+    // Dispatch event on Enter keypress inside the input field
+    this.rootPathInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Prevents default form submissions if wrapped in a form
+        this.triggerInit();
+      }
     });
   }
 }

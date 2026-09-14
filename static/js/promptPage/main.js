@@ -248,7 +248,12 @@ function init() {
 
   // Bind Save Changes button
   document.getElementById("btn-save-script")?.addEventListener("click", () => {
-    if (typeof saveCurrentNodeScript === "function") {
+    saveCurrentNodeScript();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 's' && e.ctrlKey) {
+      e.preventDefault(); // Stops the browser's save window
       saveCurrentNodeScript();
     }
   });

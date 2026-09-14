@@ -1,6 +1,7 @@
 import json
 from TreeNode import TreeNode
 from config import prompt_snippet_file
+import re
 
 class PromptNode(TreeNode):
     def __init__(
@@ -42,8 +43,16 @@ class PromptNode(TreeNode):
     def buildPrompt(self, **kwargs) -> str:
         """
         Formats the node's script template with keyword arguments.
+        Replaces only placeholders of the pattern '{[a-zA-Z0-9_]+}' matching kwargs.
         """
-        return self.script.format(**kwargs)
+        pattern = r'\{([a-zA-Z0-9_]+)\}'
+        
+        def replace_match(match):
+            key = match.group(1)
+            # Replace if key exists in kwargs; otherwise leave placeholder untouched
+            return str(kwargs.get(key, match.group(0)))
+
+        return re.sub(pattern, replace_match, self.script)
 
     def getJson(self) -> dict:
         """

@@ -4,6 +4,8 @@ import '../commons/components/header.js';
 import './ui/outputModal.js';
 import './ui/projectInitialize.js';
 import './ui/promptEditor.js';
+import './ui/snippetDrawer.js';
+import './ui/pageContainer.js'; 
 
 document.addEventListener("DOMContentLoaded", () => { 
   const SocketObject = new SocketInterface();

@@ -30,11 +30,26 @@
     <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col font-sans">
         <!-- Header -->
         <app-header title="Prompt Workspace"></app-header>
+        
+        <main class="flex-1  w-full mx-auto flex flex-col gap-6" >
+            <project-init></project-init>  
+            <page-container>
+                <!-- Default / First Page -->
+                <page name="prompt">
+                    <div class="flex items-start gap-4 w-full">
+                        <snippet-drawer side="left"></snippet-drawer>
+                        <prompt-editor class="flex-1"></prompt-editor>
+                    </div>
+                </page>
 
-        <main class="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col gap-6">
-            <project-init></project-init>
-
-            <prompt-editor></prompt-editor>
+                <!-- Additional Page Placeholder for Future Expansion -->
+                <page name="settings">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                        <h2 class="text-lg font-medium text-gray-200 mb-2">Workspace Settings</h2>
+                        <p class="text-sm text-gray-400">Future configuration settings can go here.</p>
+                    </div>
+                </page>
+            </page-container>
         </main>
 
         <output-modal></output-modal>
