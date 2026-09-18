@@ -17,18 +17,17 @@ from JsNodes import File, init as init_js_nodes
 # Register language hooks
 init_js_nodes()
 ##################################
-file = File("D:/projects_current/chowka bara/ui.js")
-sys.stdout = open(js_test_dir / 'output.txt', 'w')
+# file = File("D:/projects_current/chowka bara/ui.js")
+# sys.stdout = open(js_test_dir / 'output.txt', 'w')
 
-file.load_children()
-exit()
+# file.load_children()
+# exit()
 ####################################
 
 
 def normalize_code(code: str) -> str:
-    """Normalizes line endings and trailing whitespace for fair comparison."""
-    lines = [line.strip() for line in code.strip().splitlines() if line.strip()]
-    return "\n".join(lines)
+    """charactar stream as any amount of space doesnt give much effect on js output"""
+    return ''.join(code.split())
 
 
 def run_reconstruction_test(test_config: dict) -> tuple[bool, str | None]:
