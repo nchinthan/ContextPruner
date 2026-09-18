@@ -13,6 +13,7 @@ process.stdin.on("end", () => {
         // Parse code supporting modern extensions, JSX, and TypeScript
         const ast = parser.parse(code, {
             sourceType: "module",
+            attachComment: true, // Attach comments directly to adjacent AST nodes
             plugins: ["typescript", "jsx", "classProperties", "decorators-legacy"]
         });
         

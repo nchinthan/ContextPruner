@@ -277,8 +277,10 @@ def index():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run the SocketIO server.")
     parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
-    
+    parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to run the server on')
+
     # Parse the arguments
     args = parser.parse_parser_args() if hasattr(parser, 'parse_parser_args') else parser.parse_args()
     
-    socketio.run(app, debug=True, port=args.port)
+    socketio.run(app, debug=True, host=args.host, port=args.port)
+

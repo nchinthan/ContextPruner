@@ -17,8 +17,7 @@ class SnippetDrawer extends HTMLElement {
   }
 
   render() {
-    this.className = "w-64 bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col h-[520px] shadow-lg";
-    this.innerHTML = `
+      this.className = "w-64 bg-gray-900 bg-[url('/static/images/vertical.png')] bg-cover bg-center border border-gray-800 rounded-xl p-4 flex flex-col h-[520px] shadow-lg relative overflow-hidden";    this.innerHTML = `
       <div class="flex justify-between items-center pb-3 border-b border-gray-800 mb-3">
         <h3 class="text-xs font-semibold text-gray-300 uppercase tracking-wider">
           Snippets

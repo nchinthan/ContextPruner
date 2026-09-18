@@ -1,11 +1,14 @@
 // File: static/js/index_page/main.js
 import SocketInterface from "../commons/socketInterface.js";
+import { CodebaseController } from "./codebaseController.js";
 import '../commons/components/header.js';
 import './ui/outputModal.js';
 import './ui/projectInitialize.js';
 import './ui/promptEditor.js';
 import './ui/snippetDrawer.js';
 import './ui/pageContainer.js'; 
+import './ui/codebase/NodeViewerTreeView.js';
+import './ui/codebase/NodeCodeEditor.js';
 
 document.addEventListener("DOMContentLoaded", () => { 
   const SocketObject = new SocketInterface();
@@ -14,6 +17,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const editor = document.querySelector('prompt-editor');
 
   const appHeader = document.querySelector('app-header');
+
+  // Initialize Codebase Controller
+  const treeViewEl = document.querySelector('node-viewer-tree-view');
+  const codeEditorEl = document.querySelector('node-code-editor');
+  let codebaseCtrl = null;
+
+  if (treeViewEl && codeEditorEl) {
+    codebaseCtrl = new CodebaseController(SocketObject, treeViewEl, codeEditorEl);
+  }
 
   SocketObject.onConnect(() => {
     appHeader.setConnectionStatus(true);
@@ -27,8 +39,15 @@ document.addEventListener("DOMContentLoaded", () => {
   SocketObject.SessionInit.success(({ root }) => {
     isSessionReady = true;
     const msg = document.getElementById("session-message");
-    msg.className = "text-xs mt-2 text-emerald-400";
-    msg.innerText = `Workspace loaded successfully: ${root}`;
+    if (msg) {
+      msg.className = "text-xs mt-2 text-emerald-400";
+      msg.innerText = `Workspace loaded successfully: ${root}`;
+    }
+
+    // Load initial root tree upon workspace initialization
+    if (codebaseCtrl) {
+      codebaseCtrl.loadRootTree();
+    }
   });
 
   SocketObject.SessionInit.fail(({ message }) => {

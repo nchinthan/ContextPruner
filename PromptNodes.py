@@ -40,6 +40,37 @@ class PromptNode(TreeNode):
         self.leaf = len(self.children) == 0
         self._data = None
 
+    def set(self, path: list, new_script: str) -> bool:
+        """
+        Recursively traverses down the path to update a target node's script
+        without clearing or resetting its child nodes.
+        """
+        if not path:
+            self.script = new_script
+            return True
+            
+        target_name = path[0]
+        
+        if self.leaf:
+            if self.dead_end:
+                return False
+            else:
+                self.load_children()
+
+        found_child = None
+        for child in self.children:
+            if child.name == target_name:
+                found_child = child
+                break
+                
+        if found_child:
+            if len(path) == 1:
+                found_child.script = new_script
+                return True
+            return found_child.set(path[1:], new_script)
+            
+        return False
+
     def buildPrompt(self, **kwargs) -> str:
         """
         Formats the node's script template with keyword arguments.
@@ -76,6 +107,7 @@ class PromptNode(TreeNode):
 
         return result
 
+
 class PromptLoader(TreeNode):
     _instance = None
 
@@ -103,6 +135,12 @@ class PromptLoader(TreeNode):
         super().__init__(
             name=name, script="", dead_end=dead_end, language=language
         )
+
+    def set(self, path: list, new_script: str) -> bool:
+        """
+        Delegate set calls to the PromptNode tree navigation without clearing children.
+        """
+        return PromptNode.set(self, path, new_script)
     
     def addPrompt(self, path, name, script=None):
         data = {}

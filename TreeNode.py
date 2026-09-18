@@ -223,13 +223,7 @@ class Folder(TreeNode):
                 elif entry.is_file():
                     # Supported script languages
                     ext = entry.suffix.lower()
-                    lang = "unknown"
-                    if ext == ".py":
-                        lang = "python"
-                    elif ext in [".js", ".ts", ".jsx", ".tsx"]:
-                        lang = "javascript"
-                        
-                    self.children.append(File(str(entry), language=lang))
+                    self.children.append(File(str(entry), language=ext))
             
             if self.children:
                 self.leaf = False

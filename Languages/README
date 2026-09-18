@@ -1,0 +1,4 @@
+Never access/instantiate any of these class objects directly 
+i.e dont to JsFiles('..') or PythonFile('..') , 
+it is preferable to 
+access these via : File('...','js'/'py') 

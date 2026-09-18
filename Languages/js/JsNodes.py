@@ -1,13 +1,10 @@
+# File: Languages/js/JsNodes.py
 import json
 import subprocess
 from pathlib import Path
 from TreeNode import TreeNode, File
 
 def parse_js_with_babel(script_content: str) -> list:
-    """
-    Spawns a Node.js process to run babel_parser.js, passing code via stdin
-    and reading back the AST JSON representation.
-    """
     parser_path = Path(__file__).parent / "babel_parser.js"
     
     try:
@@ -22,13 +19,9 @@ def parse_js_with_babel(script_content: str) -> list:
         stdout, stderr = process.communicate(input=script_content)
         
         if process.returncode != 0:
-            # Syntax error or crash in Node worker
             return []
             
         return json.loads(stdout)
-    except FileNotFoundError:
-        print("Error: 'node' executable not found. Please ensure Node.js is installed.")
-        return []
     except Exception:
         return []
 
@@ -36,20 +29,19 @@ def parse_js_with_babel(script_content: str) -> list:
 class JSClassNode(TreeNode):
     INDENTATION = 4
     
-    def __init__(self, name: str, script: str, inherited_classes: list = None): # pyright: ignore[reportArgumentType]
+    def __init__(self, name: str, script: str, inherited_classes: list = None, outer_script: str = None):
         super().__init__(name, script, False, 'javascript')
         self.inherited_classes = inherited_classes or []
+        self.outer_script = outer_script or "class " + name + " {{\n{}\n}}"
         
     def get_script(self) -> str:
-        # Reconstruct inheritance syntax using 'extends'
-        extends_clause = f" extends {', '.join(self.inherited_classes)}" if self.inherited_classes else ""
         indentation = ' ' * JSClassNode.INDENTATION
-        
-        # Compile child methods/fields and match the user-defined indentation spacing
         child_script = super().get_script().replace('\t', indentation)
         
-        class_script = f"class {self.name}{extends_clause} {{\n{child_script}\n}}"
-        return class_script
+        if child_script:
+            return self.outer_script.format(child_script)
+        else:
+            return self.outer_script.format("")
 
 
 class JSFile(File):
@@ -58,21 +50,28 @@ class JSFile(File):
         self.dead_end = False
 
     def load_children(self):
-        """
-        Processes JavaScript/TypeScript files by mapping Babel AST statement blocks
-        into sequential TreeNodes.
-        """
         if not self.script:
             return
 
         ast_body = parse_js_with_babel(self.script)
+        print(json.dumps(ast_body,indent=2))
         if not ast_body:
-            return  # Kept as leaf node if parsing yields an empty body or fails
+            return
 
         lines = self.script.splitlines()
 
+        def get_expanded_node_loc(node):
+            """Calculates line bounds including leading comments attached to the node."""
+            start_line = node["loc"]["start"]["line"]
+            end_line = node["loc"]["end"]["line"]
+
+            for comment in node.get("leadingComments", []):
+                if "loc" in comment:
+                    start_line = min(start_line, comment["loc"]["start"]["line"])
+
+            return {"line": start_line}, {"line": end_line}
+
         def get_source_segment(start_loc, end_loc):
-            # Babel provides 1-based indexing for line numbers
             if not start_loc or not end_loc:
                 return ""
             return "\n".join(lines[start_loc['line'] - 1 : end_loc['line']])
@@ -82,17 +81,27 @@ class JSFile(File):
 
             if key.get("type") == "Identifier":
                 return key["name"]
-
             if key.get("type") == "PrivateName":
                 return "#" + key["id"]["name"]
-
             if key.get("type") == "StringLiteral":
                 return key["value"]
-
             if key.get("type") == "NumericLiteral":
                 return str(key["value"])
 
             return "<computed>"
+
+        def unwrap_ast_node(node):
+            node_type = node.get("type")
+            if node_type in ["ExportNamedDeclaration", "ExportDefaultDeclaration"]:
+                declaration = node.get("declaration")
+                if declaration and isinstance(declaration, dict):
+                    inner_type = declaration.get("type")
+                    if inner_type in ["ClassDeclaration", "FunctionDeclaration"]:
+                        declaration["loc"] = node["loc"]
+                        declaration["leadingComments"] = node.get("leadingComments", [])
+                        return inner_type, declaration
+
+            return node_type, node
 
         self.children = []
         self.leaf = False
@@ -101,9 +110,9 @@ class JSFile(File):
         current_block_type = None
         current_block_nodes = []
 
-        # Step 1: Scan and group sequential AST elements into types
-        for node in ast_body:
-            node_type = node.get("type")
+        # Step 1: Scan and group sequential AST elements
+        for raw_node in ast_body:
+            node_type, node = unwrap_ast_node(raw_node)
             
             if node_type in ["ImportDeclaration", "ExportNamedDeclaration", "ExportDefaultDeclaration"]:
                 b_type = "import_export"
@@ -126,8 +135,8 @@ class JSFile(File):
 
         # Step 2: Convert structural blocks into TreeNodes
         for b_type, b_nodes in blocks:
-            start_loc = b_nodes[0]["loc"]["start"]
-            end_loc = b_nodes[-1]["loc"]["end"]
+            start_loc, _ = get_expanded_node_loc(b_nodes[0])
+            _, end_loc = get_expanded_node_loc(b_nodes[-1])
             block_script = get_source_segment(start_loc, end_loc)
 
             if b_type == "import_export":
@@ -138,45 +147,81 @@ class JSFile(File):
 
             elif b_type == "func":
                 for func_node in b_nodes:
-                    f_name = func_node["id"]["name"]
-                    f_script = get_source_segment(func_node["loc"]["start"], func_node["loc"]["end"])
+                    f_start, f_end = get_expanded_node_loc(func_node)
+                    f_name = func_node.get("id", {}).get("name") if func_node.get("id") else "default"
+                    f_script = get_source_segment(f_start, f_end)
                     self.add_child([], TreeNode(f_name, f_script, True, "javascript"))
 
             elif b_type == "class":
                 for class_node in b_nodes:
-                    c_name = class_node["id"]["name"]
-                    c_script = get_source_segment(class_node["loc"]["start"], class_node["loc"]["end"])
+                    # IMPORTANT: Use unexpanded AST bounds for the class shell header/footer
+                    raw_c_start = class_node["loc"]["start"]
+                    raw_c_end = class_node["loc"]["end"]
+                    c_script = get_source_segment(raw_c_start, raw_c_end)
                     
-                    # Track inheritance chain (superclasses)
+                    c_name = class_node.get("id", {}).get("name") if class_node.get("id") else "default"
+                    
                     inherited = []
                     super_class = class_node.get("superClass")
-                    if super_class:
-                        if super_class.get("type") == "Identifier":
-                            inherited.append(super_class["name"])
+                    if super_class and super_class.get("type") == "Identifier":
+                        inherited.append(super_class["name"])
                     
-                    c_node = JSClassNode(c_name, c_script, inherited_classes=inherited)
+                    first_brace_idx = c_script.find('{')
+                    last_brace_idx = c_script.rfind('}')
+                    
+                    if first_brace_idx != -1 and last_brace_idx != -1:
+                        header = c_script[:first_brace_idx + 1]
+                        footer = c_script[last_brace_idx:]
+                        outer_script = header.replace('{', '{{').replace('}', '}}') + "\n{}\n" + footer.replace('{', '{{').replace('}', '}}')
+                        outer_script = outer_script.replace('{{}}', '{}')
+                    else:
+                        outer_script = c_script + "\n{{\n{}\n}}"
 
-                    # Extract methods, constructors, and static features inside the body
+                    c_node = JSClassNode(c_name, c_script, inherited_classes=inherited, outer_script=outer_script)
+
                     class_body = class_node.get("body", {}).get("body", [])
+                    
+                    # Track lines occupied by members (and their leading comments)
+                    occupied_line_ranges = []
+                    for member in class_body:
+                        m_start, m_end = get_expanded_node_loc(member)
+                        occupied_line_ranges.append((m_start["line"], m_end["line"]))
+
+                    # Collect unattached orphan comments in the class body
+                    body_comments = class_node.get("body", {}).get("innerComments", [])
+                    for comm in body_comments:
+                        c_start_line = comm["loc"]["start"]["line"]
+                        c_end_line = comm["loc"]["end"]["line"]
+                        
+                        is_attached = any(
+                            r_start <= c_start_line and c_end_line <= r_end
+                            for r_start, r_end in occupied_line_ranges
+                        )
+                        
+                        if not is_attached:
+                            comm_script = get_source_segment(comm["loc"]["start"], comm["loc"]["end"])
+                            c_node.add_child([], TreeNode("comment", comm_script, True, "javascript"))
+
                     for member in class_body:
                         m_type = member.get("type")
-                        m_script = get_source_segment(member["loc"]["start"], member["loc"]["end"])
+                        m_start, m_end = get_expanded_node_loc(member)
+                        m_script = get_source_segment(m_start, m_end)
                         
-                        if m_type in ["ClassMethod","ClassPrivateMethod"]:
+                        if m_type in ["ClassMethod", "ClassPrivateMethod"]:
                             m_name = get_member_name(member)
                             c_node.add_child([], TreeNode(m_name, m_script, True, "javascript"))
 
-                        elif m_type in ["ClassProperty", "PropertyDefinition","ClassPrivateProperty"]:
+                        elif m_type in ["ClassProperty", "PropertyDefinition", "ClassPrivateProperty"]:
                             m_name = get_member_name(member)
                             c_node.add_child([], TreeNode(m_name, m_script, True, "javascript"))
                         else:
-                            print(m_script)
                             c_node.add_child([], TreeNode("class_expression", m_script, True, "javascript"))
 
                     self.add_child([], c_node)
 
 def init():
-    # Hook the language factory registers
+    File.LANGUAGE_HOOKS['.js'] = JSFile
+    File.LANGUAGE_HOOKS['.ts'] = JSFile
     File.LANGUAGE_HOOKS['js'] = JSFile
     File.LANGUAGE_HOOKS['ts'] = JSFile
     File.LANGUAGE_HOOKS['javascript'] = JSFile

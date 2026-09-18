@@ -6,4 +6,3 @@ import pyperclip
 PythonNodes.init()
 JsNodes.init()
 
-
