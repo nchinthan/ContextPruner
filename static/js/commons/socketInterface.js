@@ -58,7 +58,7 @@ class NodeInterface {
 }
 
 export default class SocketInterface {
-  constructor(url = `${window.location.protocol}//${window.location.hostname}:5000`) {
+  constructor(url = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`) {
     this.socket = io(url);
     this.handlers = {
       sessionInit: { success: [], fail: [] }

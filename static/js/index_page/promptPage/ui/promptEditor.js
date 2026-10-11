@@ -1,10 +1,7 @@
 // File: static/js/index_page/ui/promptEditor.js
-class PromptEditor extends HTMLElement {
-  constructor() {
-    super();
-    const EditorPlaceholder = "Write your prompt here... For example:\nPlease review this code structure:\nfile:src/dataInterface/API.js/ApiClient";
-    this.className = "bg-gray-900 border border-gray-800 rounded-xl p-5 flex-1 flex flex-col shadow-lg relative";
-    this.innerHTML = `
+const EditorPlaceholder = "Write your prompt here... For example:\nPlease review this code structure:\nfile:src/dataInterface/API.js/ApiClient";
+
+const promptEditorHtml = `
         <div class="flex justify-between items-center mb-3">
             <label class="text-sm font-medium text-gray-300">
                 Prompt Editor
@@ -75,6 +72,12 @@ class PromptEditor extends HTMLElement {
             </div>
         </div>
     `;
+class PromptEditor extends HTMLElement {
+  constructor() {
+    super();
+
+    this.className = "bg-gray-900 border border-gray-800 rounded-xl p-5 flex-1 flex flex-col shadow-lg relative";
+    this.innerHTML = promptEditorHtml ; 
 
     this.suggestions = [];
     this.selectedIndex = 0;

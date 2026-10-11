@@ -1,5 +1,5 @@
 // File: static/js/index_page/ui/snippetDrawer.js
-
+import { showToast } from '../../../commons/components/toast.js';
 class SnippetDrawer extends HTMLElement {
   constructor() {
     super();
@@ -98,7 +98,7 @@ class SnippetDrawer extends HTMLElement {
     const textToSave = selection || editor.value.trim();
 
     if (!textToSave) {
-      alert("Please enter or select text in the editor to save as a snippet.");
+      showToast("Please enter or select text in the editor to save as a snippet.");
       return;
     }
 

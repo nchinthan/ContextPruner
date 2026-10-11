@@ -56,6 +56,11 @@
   },
   {
     "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/commons/components/toast.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
     "file": "D:/projects_current/Coding_prompt_builder/static/js/commons/components/treeView/BaseTreeNode.js",
     "parent_path": []
   },
@@ -76,7 +81,57 @@
   },
   {
     "type": "reconstruction",
-    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/ui/outputModal.js",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/PromptController.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/codebasePage/ui/NodeCodeEditor.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/codebasePage/ui/NodeViewerTreeNode.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/codebasePage/ui/NodeViewerTreeView.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/promptPage/EditorUIHandler.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/promptPage/MatchHandler.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/promptPage/PromptCompiler.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/promptPage/ui/outputModal.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/promptPage/ui/promptEditor.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/promptPage/ui/snippetDrawer.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/promptPage/ui/videoHolder.js",
     "parent_path": []
   },
   {
@@ -87,31 +142,6 @@
   {
     "type": "reconstruction",
     "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/ui/projectInitialize.js",
-    "parent_path": []
-  },
-  {
-    "type": "reconstruction",
-    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/ui/promptEditor.js",
-    "parent_path": []
-  },
-  {
-    "type": "reconstruction",
-    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/ui/snippetDrawer.js",
-    "parent_path": []
-  },
-  {
-    "type": "reconstruction",
-    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/ui/codebase/NodeCodeEditor.js",
-    "parent_path": []
-  },
-  {
-    "type": "reconstruction",
-    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/ui/codebase/NodeViewerTreeNode.js",
-    "parent_path": []
-  },
-  {
-    "type": "reconstruction",
-    "file": "D:/projects_current/Coding_prompt_builder/static/js/index_page/ui/codebase/NodeViewerTreeView.js",
     "parent_path": []
   },
   {
@@ -402,6 +432,11 @@
   {
     "type": "reconstruction",
     "file": "D:/projects_current/roomGames/games/static/js/games/tierList/gameState.js",
+    "parent_path": []
+  },
+  {
+    "type": "reconstruction",
+    "file": "",
     "parent_path": []
   }
 ]

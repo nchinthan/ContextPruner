@@ -104,12 +104,12 @@ class OutputModal extends HTMLElement {
       } else if (count < 1000) {
         colorClass = "text-yellow-400";
         label = "Moderate";
-      } else if (count < 2500) {
+      } else if (count < 3400) {
         colorClass = "text-orange-400";
         label = "Long";
       } else if (count < 5000) {
         colorClass = "text-red-400";
-        label = "Very long";
+        label = "Gemini cant handle ";
       } else {
         colorClass = "text-purple-400";
         label = "Extremely long";

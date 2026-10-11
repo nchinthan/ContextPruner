@@ -1,10 +1,11 @@
 import os
-from flask import Flask, request,render_template,jsonify
+from flask import Flask, request,render_template,jsonify,send_from_directory
 from flask_socketio import SocketIO, emit, disconnect
 from parser import * 
 import argparse 
 from PromptNodes import PromptLoader
 from prompt_bp import prompt_bp
+import subprocess
 
 # --- Flask & SocketIO Server Setup ---
 app = Flask(__name__)
@@ -36,7 +37,7 @@ def handle_init_session(data):
     """
     sid = request.sid
     root_path = data.get('root_path')
-
+    
     if not root_path or not os.path.exists(root_path):
         emit('session_initialized', {'status': 'error', 'message': 'Invalid root path'})
         return
@@ -49,12 +50,9 @@ def handle_init_session(data):
 def handle_path_request(data):
     """
     Handles path execution requests.
-    Data format: {
-        'path': 'frontend/src/dataInterface/API.js/ApiClient/edit_script',
-        'new_script': '...',           # Required for 'edit_script'
-        'child_node': {...},           # Required for 'add_child'
-        'child_name': 'target_name'    # Required for 'delete_child'
-    }
+    Supported child operations:
+    - 'children' or '$children()'
+    - '$children-recursive()'
     """
     sid = request.sid
     if sid not in user_sessions:
@@ -90,8 +88,12 @@ def handle_path_request(data):
         result = target_node.get_script()
         emit('response', {'path': raw_path, 'status': 'success', 'data': result})
 
-    elif method == 'children':
+    elif method in ('children', '$children()'):
         result = target_node.get_children()
+        emit('response', {'path': raw_path, 'status': 'success', 'data': result})
+
+    elif method == '$children-recursive()':
+        result = target_node.get_children_recursive()
         emit('response', {'path': raw_path, 'status': 'success', 'data': result})
 
     elif method == 'edit_script':
@@ -153,7 +155,7 @@ def handle_path_request(data):
         emit('response', {
             'path': raw_path,
             'status': 'error',
-            'message': f"Unsupported method '{method}'. Valid options: 'script', 'children', 'edit_script', 'add_child', 'delete_child'."
+            'message': f"Unsupported method '{method}'. Valid options: 'script', 'children', '$children()', '$children-recursive()', 'edit_script', 'add_child', 'delete_child'."
         })
 
 @socketio.on('prompt_socket')
@@ -276,11 +278,11 @@ def index():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run the SocketIO server.")
-    parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
-    parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to run the server on')
+    parser.add_argument('--port', type=int, default=7070, help='Port to run the server on')
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='Host to run the server on')
 
     # Parse the arguments
     args = parser.parse_parser_args() if hasattr(parser, 'parse_parser_args') else parser.parse_args()
-    
+    print(f"Socket Running on {args.port}")
     socketio.run(app, debug=True, host=args.host, port=args.port)
 

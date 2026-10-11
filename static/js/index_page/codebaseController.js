@@ -1,4 +1,5 @@
 // File: static/js/codebase_page/codebaseController.js
+import { showToast } from '../commons/components/toast.js';
 export class CodebaseController {
   constructor(socketInterface, treeViewEl, editorEl) {
     this.socket = socketInterface;
@@ -34,7 +35,7 @@ export class CodebaseController {
       this.treeView.render(rootTree);
     } catch (err) {
       console.error('Failed to load root tree:', err);
-      alert(`Error loading tree: ${err.message}`);
+      showToast(`Error loading tree: ${err.message}`);
     }
   }
 
@@ -52,7 +53,7 @@ export class CodebaseController {
       nodeElement.populateChildren(children);
     } catch (err) {
       console.error(`Failed loading children for ${path}:`, err);
-      alert(`Failed loading node children: ${err.message}`);
+      showToast(`Failed loading node children: ${err.message}`);
       nodeElement.populateChildren([]);
     }
   }
@@ -67,7 +68,7 @@ export class CodebaseController {
       this.editor.value = res.data || '';
     } catch (err) {
       console.error(`Failed to fetch script for ${path}:`, err);
-      alert(`Error opening node script: ${err.message}`);
+      showToast(`Error opening node script: ${err.message}`);
     }
   }
 
@@ -75,10 +76,10 @@ export class CodebaseController {
     const { path, script } = e.detail;
     try {
       await this.socket.node.editScript(path, script);
-      alert(`Script saved successfully for node "${path}"!`);
+      showToast(`Script saved successfully for node "${path}"!`);
     } catch (err) {
       console.error(`Failed saving script for ${path}:`, err);
-      alert(`Save error: ${err.message}`);
+      showToast(`Save error: ${err.message}`);
     }
   }
 
@@ -89,11 +90,11 @@ export class CodebaseController {
 
     try {
       await this.socket.node.addChild(path, childName.trim());
-      alert(`Child "${childName}" added successfully!`);
+      showToast(`Child "${childName}" added successfully!`);
       this.loadRootTree();
     } catch (err) {
       console.error(`Failed adding child under ${path}:`, err);
-      alert(`Add child failed: ${err.message}`);
+      showToast(`Add child failed: ${err.message}`);
     }
   }
 
@@ -105,13 +106,13 @@ export class CodebaseController {
 
     try {
       await this.socket.node.deleteChild(parentPath, childName);
-      alert(`Node "${path}" deleted.`);
+      showToast(`Node "${path}" deleted.`);
       this.editor.setNodePath('');
       this.editor.value = '';
       this.loadRootTree();
     } catch (err) {
       console.error(`Failed deleting node ${path}:`, err);
-      alert(`Delete failed: ${err.message}`);
+      showToast(`Delete failed: ${err.message}`);
     }
   }
 }

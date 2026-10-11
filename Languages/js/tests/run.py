@@ -114,6 +114,7 @@ def main():
     }
     with open(js_test_dir / 'result.json', 'w', encoding="utf-8") as fp: 
         json.dump(output, fp, indent=2)
+        print('output to',js_test_dir / 'result.json')
      
     if len(failed) > 0:
         sys.exit(1)

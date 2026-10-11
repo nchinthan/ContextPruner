@@ -29,7 +29,24 @@ class TreeNode:
     
     def get_children(self)->list[str]:
         if self.leaf and not self.dead_end : self.load_children()
-        return [i.name for i in self.children]
+        return [i.name for i in self.children] 
+    
+    def get_children_recursive(self, prefix: str = "") -> list[str]:
+        """Recursively returns relative paths for all nested descendant nodes."""
+        if self.leaf and not self.dead_end:
+            self.load_children()
+
+        results = []
+        for child in self.children:
+            # Build relative child path
+            child_rel_path = f"{prefix}/{child.name}" if prefix else child.name
+            results.append(child_rel_path)
+            
+            # Recurse down if child has or can have descendants
+            if not child.dead_end:
+                results.extend(child.get_children_recursive(prefix=child_rel_path))
+                
+        return results
 
     def load_children(self):
         """

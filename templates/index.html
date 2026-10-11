@@ -39,7 +39,6 @@
                     <div class="flex items-start gap-4 w-full">
                         <snippet-drawer side="left"></snippet-drawer>
                         <prompt-editor class="flex-1"></prompt-editor>
-                        
                     </div>
                 </page>
 
@@ -47,6 +46,13 @@
                     <div class="flex h-[calc(100vh-5rem)] w-full overflow-hidden rounded-xl border border-gray-800 bg-gray-900">
                     <node-viewer-tree-view></node-viewer-tree-view>
                     <node-code-editor class="flex-1 flex flex-col p-6 min-h-0 bg-gray-950"></node-code-editor>
+                    </div>
+                </page>
+                <!-- File: templates/index.html -->
+                <page name="add-node">
+                    <div class="w-full h-[calc(100vh-6rem)]">
+                        <add-node-editor></add-node-editor>
+                        <diff-viewer-modal></diff-viewer-modal>
                     </div>
                 </page>
 

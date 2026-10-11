@@ -1,5 +1,6 @@
 // File: static/js/codebase_page/components/NodeCodeEditor.js
 import AbstractHighlightedEditor from '../../../commons/components/AbstractHighlightedEditor.js';
+import { showToast } from '../../../commons/components/toast.js';
 
 export class NodeCodeEditor extends AbstractHighlightedEditor {
   constructor() {
@@ -35,7 +36,7 @@ export class NodeCodeEditor extends AbstractHighlightedEditor {
 
       actions.querySelector('#save-script-btn')?.addEventListener('click', () => {
         if (!this._currentPath) {
-          alert('No node selected to save.');
+          showToast('No node selected to save.');
           return;
         }
         this.dispatchEvent(
@@ -49,7 +50,7 @@ export class NodeCodeEditor extends AbstractHighlightedEditor {
 
       actions.querySelector('#delete-node-btn')?.addEventListener('click', () => {
         if (!this._currentPath) {
-          alert('No node selected to delete.');
+          showToast('No node selected to delete.');
           return;
         }
         if (confirm(`Are you sure you want to delete node: "${this._currentPath}"?`)) {
