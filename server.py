@@ -1,11 +1,10 @@
 import os
 from flask import Flask, request,render_template,jsonify,send_from_directory
 from flask_socketio import SocketIO, emit, disconnect
-from parser import * 
+
+from backend.src.services.parser import PromptLoader,Folder,TreeNode
 import argparse 
-from PromptNodes import PromptLoader
-from prompt_bp import prompt_bp
-import subprocess
+from backend.src.routes.prompt_bp import prompt_bp
 
 # --- Flask & SocketIO Server Setup ---
 app = Flask(__name__)

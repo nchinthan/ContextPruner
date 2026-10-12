@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from PromptNodes import PromptLoader
+from ..services.parser import PromptLoader
 
 prompt_bp = Blueprint("prompt_node", __name__, url_prefix="/prompts")
 

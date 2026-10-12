@@ -1,5 +1,5 @@
 import json
-from TreeNode import TreeNode
+from backend.src.services.TreeNode import TreeNode
 from config import prompt_snippet_file
 import re
 

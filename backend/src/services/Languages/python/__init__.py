@@ -1,4 +1,4 @@
-from TreeNode import TreeNode , File 
+from backend.src.services.TreeNode import TreeNode , File 
 import ast
 
 class PythonClassNode(TreeNode):

@@ -12,7 +12,7 @@ root_dir = js_nodes_dir.parent.parent
 sys.path.insert(0, str(root_dir))
 sys.path.insert(0, str(js_nodes_dir))
 
-from JsNodes import File, init as init_js_nodes
+from backend.src.services.Languages.js import File, init as init_js_nodes
 
 # Register language hooks
 init_js_nodes()

@@ -2,7 +2,7 @@
 import json
 import subprocess
 from pathlib import Path
-from TreeNode import TreeNode, File
+from backend.src.services.TreeNode import TreeNode, File
 
 def parse_js_with_babel(script_content: str) -> list:
     parser_path = Path(__file__).parent / "babel_parser.js"

@@ -1,7 +1,7 @@
 # File: Languages/html/HtmlNodes.py
 import re
 import random
-from TreeNode import TreeNode, File
+from backend.src.services.TreeNode import TreeNode, File
 
 
 def generate_unique_name(tag_name: str) -> str:
