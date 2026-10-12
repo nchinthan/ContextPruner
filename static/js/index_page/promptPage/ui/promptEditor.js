@@ -6,7 +6,7 @@ const promptEditorHtml = `
             <label class="text-sm font-medium text-gray-300">
                 Prompt Editor
                 <span class="text-xs font-normal text-gray-500">
-                  (Type <code class="text-indigo-400 font-mono">file:</code> to trigger path autocomplete)
+                  (Type <code class="text-indigo-400 font-mono">file:</code> to trigger path autocomplete for files and <code class="text-indigo-400 font-mono">prompt:</code> for accessing prompt , you can pass args to prompts as well using promptpath(key word args) ex: <code class="text-indigo-400 font-mono">prompt:frontend/design(theme='dark')</code>)
                 </span>
             </label>
             <div class="prompt-copy-status text-xs font-medium text-emerald-400 hidden">Copied to clipboard!</div>

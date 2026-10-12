@@ -1,4 +1,360 @@
-Never access/instantiate any of these class objects directly 
-i.e dont to JsFiles('..') or PythonFile('..') , 
-it is preferable to 
-access these via : File('...','js'/'py') 
+# Language Extension & Parser Architecture
+
+This module follows the **Open-Closed Principle (OCP)**: new programming languages can be added as independent extensions without modifying the existing core parser.
+
+The core abstractions are:
+
+- `TreeNode` — Base class for nodes in the source tree.
+- `File` — Base class for source files and language-hook resolution.
+- `File.LANGUAGE_HOOKS` — Registry mapping extensions/language names to language-specific `File` classes.
+
+---
+
+# Adding a New Language
+
+To add a new language, create a directory under:
+
+```text
+backend/src/services/Languages/<language_name>/
+```
+
+For example:
+
+```text
+backend/src/services/Languages/python/
+├── __init__.py
+├── PythonFile.py
+├── PythonClassNode.py       # Optional
+```
+
+A language implementation has **one required component** and two optional components:
+
+| Component                  | Required | Purpose                                               |
+| -------------------------- | -------- | ----------------------------------------------------- |
+| `<Language>File`           | Yes      | Parses the source and builds the `TreeNode` hierarchy |
+| Custom `TreeNode`s         | No       | Represents language-specific structures/behavior      |
+| `__init__.py` registration | Yes      | Registers the language with `File.LANGUAGE_HOOKS`     |
+
+---
+
+## 1. Implement `<Language>File`
+
+Create a class inheriting from `File` and implement `load_children()`.
+
+```python
+# PythonFile.py
+
+import ast
+from backend.src.services.TreeNode import File
+
+
+class PythonFile(File):
+
+    def __init__(
+        self,
+        path_str: str,
+        language: str = "python"
+    ):
+        super().__init__(
+            path_str,
+            language=language
+        )
+
+    def load_children(self):
+
+        if not self.script:
+            return
+
+        try:
+            tree = ast.parse(self.script)
+        except SyntaxError:
+            return
+
+        self.children = []
+
+        # Convert the parsed structure into TreeNode objects.
+
+        self.leaf = False
+```
+
+### `load_children()` must
+
+- Parse the source using the language's parser/grammar.
+- Convert the parsed structure into `TreeNode` objects.
+- Preserve source ordering.
+- Build the appropriate parent/child hierarchy.
+- Set `self.children` correctly.
+- Maintain the correct leaf state.
+- Preserve any source information required by `get_script()`.
+
+The parser implementation itself is language-specific and should remain inside the language module.
+
+---
+
+## 2. Add Custom Node Types — Optional
+
+If the generic `TreeNode` is sufficient, no custom nodes are required.
+
+Create specialized nodes when the language requires custom:
+
+- structure
+- metadata
+- formatting
+- parsing behavior
+- source generation
+
+Example:
+
+```python
+# PythonClassNode.py
+
+from backend.src.services.TreeNode import TreeNode
+
+
+class PythonClassNode(TreeNode):
+
+    def __init__(
+        self,
+        name,
+        script,
+        inherited_classes=None
+    ):
+        super().__init__(
+            name,
+            script,
+            False,
+            "python"
+        )
+
+        self.inherited_classes = (
+            inherited_classes
+            if inherited_classes is not None
+            else []
+        )
+```
+
+The resulting tree might look like:
+
+```text
+PythonFile
+└── PythonClassNode
+    ├── PythonMethodNode
+    └── PythonMethodNode
+```
+
+Do not create custom node types when the generic `TreeNode` already provides the required behavior.
+
+---
+
+## 3. Register the Language
+
+Create:
+
+```text
+backend/src/services/Languages/python/__init__.py
+```
+
+Register the file parser through `File.LANGUAGE_HOOKS`:
+
+```python
+from .PythonFile import PythonFile
+from backend.src.services.TreeNode import File
+
+
+def init():
+
+    File.LANGUAGE_HOOKS[".py"] = PythonFile
+    File.LANGUAGE_HOOKS["py"] = PythonFile
+    File.LANGUAGE_HOOKS["python"] = PythonFile
+```
+
+Usually register:
+
+```text
+.<extension>
+<extension>
+<language-name>
+```
+
+The exact aliases should match the identifiers supported by the application's file/language resolver.
+
+---
+
+# Language Extension Constraints
+
+A language implementation should follow these rules:
+
+### 1. Inherit from the core abstractions
+
+The file parser must inherit from:
+
+```python
+File
+```
+
+Custom structural nodes should inherit from:
+
+```python
+TreeNode
+```
+
+---
+
+### 2. Keep language-specific logic isolated
+
+Python-specific logic belongs in:
+
+```text
+Languages/python/
+```
+
+Java-specific logic belongs in:
+
+```text
+Languages/java/
+```
+
+Do not add language-specific conditionals to `TreeNode` or `File`.
+
+---
+
+### 3. `load_children()` is the parser boundary
+
+The language parser is responsible for converting:
+
+```text
+Source Code
+    ↓
+Language Parser / AST
+    ↓
+TreeNode hierarchy
+```
+
+The core system should not need to understand the language's grammar.
+
+---
+
+### 4. Preserve source information when required
+
+If `get_script()` must reconstruct source code, the language implementation must preserve the information required for reconstruction.
+
+For example, Python's standard `ast` does not preserve comments and formatting by itself. Additional source/token information is required if those elements need to survive parsing.
+
+---
+
+### 5. Handle invalid source
+
+The language parser should gracefully handle invalid or unsupported source according to the application's error-handling policy.
+
+For example:
+
+```python
+try:
+    tree = ast.parse(self.script)
+except SyntaxError:
+    return
+```
+
+---
+
+# Testing
+
+refer to documenting in backend/src/services/Languages/tests/main.py
+
+---
+
+# Quick Checklist
+
+When adding a language:
+
+```text
+[ ] Create Languages/<language>/
+
+[ ] Create <Language>File(File)
+
+[ ] Implement load_children()
+
+[ ] Convert source into TreeNode objects
+
+[ ] Preserve ordering / required source information
+
+[ ] Add custom TreeNode classes if necessary
+
+[ ] Create __init__.py
+
+[ ] Register extensions and language name
+
+[ ] Add language-specific tests
+
+[ ] Test parsing, hierarchy, generation and errors
+```
+
+Once these are complete, the language is integrated without modifying the existing core parser.
+
+---
+
+# How the Architecture Works
+
+The extension mechanism is based on `File.LANGUAGE_HOOKS`.
+
+When a file/language needs to be resolved, the system uses the registered hook to select the appropriate parser:
+
+```text
+File / Language
+      │
+      ▼
+LANGUAGE_HOOKS
+      │
+      ├── ".py"     → PythonFile
+      ├── ".java"   → JavaFile
+      └── ".cpp"    → CppFile
+```
+
+The selected language-specific `File` class then parses its source and constructs the generic tree:
+
+```text
+Source Code
+     │
+     ▼
+Language File
+     │
+     ▼
+Language Parser
+     │
+     ▼
+TreeNode hierarchy
+```
+
+For example:
+
+```text
+PythonFile
+│
+├── ImportNode
+├── PythonClassNode
+│   ├── PythonMethodNode
+│   └── PythonMethodNode
+└── PythonFunctionNode
+```
+
+The important separation is:
+
+```text
+Core
+├── TreeNode
+├── File
+└── LANGUAGE_HOOKS
+
+        ▲
+        │ extension
+        │
+Language Module
+├── PythonFile
+├── Python-specific nodes
+├── Registration
+└── Tests
+```
+
+The **core defines the extension contract**, while each language implements that contract independently.
+
+This allows new languages to be added by **extending the system rather than modifying existing core logic**.

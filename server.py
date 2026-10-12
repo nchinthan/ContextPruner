@@ -2,15 +2,15 @@ import os
 from flask import Flask, request,render_template,jsonify,send_from_directory
 from flask_socketio import SocketIO, emit, disconnect
 
-from backend.src.services.parser import PromptLoader,Folder,TreeNode
+from backend.src.services.parser import create_prompt_loader,Folder,TreeNode
 import argparse 
-from backend.src.routes.prompt_bp import prompt_bp
+from backend.src.routes.prompt_bp import create_prompt_blueprint
 
 # --- Flask & SocketIO Server Setup ---
 app = Flask(__name__)
-app.register_blueprint(prompt_bp)
+prompt_loader = create_prompt_loader()
+app.register_blueprint(create_prompt_blueprint(prompt_loader))
 
-prompt_loader = PromptLoader()
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
 

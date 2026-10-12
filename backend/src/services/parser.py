@@ -1,4 +1,4 @@
 from .TreeNode import TreeNode,Folder
 from . import Languages
-from .prompt.PromptNodes import PromptNode,PromptLoader
+from .prompt import create_prompt_loader
 Languages.init()

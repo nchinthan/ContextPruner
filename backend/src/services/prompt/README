@@ -1,0 +1,126 @@
+# Prompt Management System: Provider Extension Guide
+
+Welcome to the prompt management module documentation. This module allows you to store, navigate, and update prompt templates as a **hierarchical tree structure** (ideal for organizing prompts by category, sub-category, and specific use cases).
+
+The architecture completely decouples core prompt handling from the underlying storage mechanism using a **Provider Pattern**.
+
+---
+
+## 1. Hierarchical Prompt Structure
+
+Prompts and categories are structured as nested dictionaries. For example:
+
+```json
+{
+  "coding": {
+    "api_design": {},
+    "frontend": {
+      "design": {}
+    },
+    "architecture": {
+      "mvc": {},
+      "IOC": {}
+    }
+  }
+}
+
+```
+
+---
+
+## 2. Architecture Overview
+
+The system relies on three main components:
+
+1. **`BasePromptProvider`**: The abstract interface defining how data is loaded and saved.
+2. **`PromptLoader`**: A singleton tree node (`TreeNode`) that builds the prompt hierarchy from the provider's raw data and handles persistence.
+3. **`loader_factory.py`**: A factory function that instantiates the correct provider based on configuration.
+
+```text
+Storage Backend (e.g., Local JSON, Database)
+    │
+    ▼ implements
+BasePromptProvider
+    │
+    ▼ injected into
+PromptLoader (TreeNode hierarchy)
+    │
+    ▼ exposed via
+loader_factory.py
+
+```
+
+---
+
+## 3. How to Add a New Data Provider
+
+Adding a new storage backend (such as a database, YAML file, or custom API) requires only two steps: **implementing the provider** and **registering it in the factory**.
+
+---
+
+### Step 1 — Implement the Provider
+
+Create a new class under `backend/src/services/prompt/providers/` that inherits from `BasePromptProvider` and implements `load_data()` and `save_data(data)`.
+
+```python
+# File: backend/src/services/prompt/providers/CustomDatabaseProvider.py
+from .BasePromptProvider import BasePromptProvider
+
+class CustomDatabaseProvider(BasePromptProvider):
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+
+    def load_data(self) -> dict:
+        """Fetch and return the full nested prompt dictionary from your data store."""
+        # Example implementation logic:
+        # data = db.fetch_all_prompts()
+        return {}
+
+    def save_data(self, data: dict) -> None:
+        """Persist the reconstructed nested dictionary back to your data store."""
+        # Example implementation logic:
+        # db.save_all_prompts(data)
+        pass
+
+```
+
+---
+
+### Step 2 — Link it in the Loader Factory
+
+Open `loader_factory.py` and update `create_prompt_loader()` to support your new provider type option.
+
+```python
+# File: backend/src/services/prompt/loader_factory.py
+from config import prompt_data_json_loc
+from .PromptLoader import PromptLoader
+from .providers.LocalJSONProvider import LocalJSONProvider
+from .providers.CustomDatabaseProvider import CustomDatabaseProvider
+
+def create_prompt_loader(provider_type='local_json') -> PromptLoader:
+    """
+    Factory function to instantiate PromptLoader with the appropriate provider.
+    """
+    if provider_type == "local_json":
+        provider = LocalJSONProvider(file_path=prompt_data_json_loc)
+    
+    elif provider_type == "custom_db":
+        provider = CustomDatabaseProvider(connection_string="your_connection_string")
+        
+    else:
+        raise ValueError(f"Unknown provider type: {provider_type}")
+
+    return PromptLoader(provider=provider)
+
+```
+
+---
+
+## 4. Quick Reference Checklist
+
+When introducing a new provider, verify that:
+
+* [ ] Your provider inherits from `BasePromptProvider`.
+* [ ] `load_data()` returns a valid nested `dict` matching the prompt hierarchy.
+* [ ] `save_data(data)` properly handles serialization and writes back to the store.
+* [ ] `loader_factory.py` imports and instantiates your provider correctly based on the requested `provider_type`.

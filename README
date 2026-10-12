@@ -1,2 +1,785 @@
-currently doesnt support files starting with '$'
-as node methods start with $ 
+# ContextPruner
+
+## Token-Efficient AI Coding & Controlled Code Editing
+
+**ContextPruner** is a developer-controlled AI coding context and editing system designed to reduce unnecessary LLM token usage.
+
+Instead of sending an entire repository or file to an AI, developers can select exactly which **files, directories, classes, methods, or other supported code nodes** should be included as context.
+
+It also separates **context selection** from **code editing and review**, allowing developers to control the scope of an AI operation and inspect the resulting changes.
+
+---
+
+# Scope
+
+ContextPruner currently provides:
+
+- **Hierarchical code context selection**
+- **Language-aware source parsing**
+- **File, directory, class, and method-level context selection**
+- **Hierarchical prompt management**
+- **Controlled code editing**
+- **Post-edit change inspection**
+- **Path-based node operations**
+- **Extensible language parser architecture**
+- **Extensible prompt storage providers**
+
+The system represents code and other hierarchical data using a shared `TreeNode` architecture.
+
+Language parsers extend the `File` abstraction and register themselves through `File.LANGUAGE_HOOKS`, allowing new languages to be added without modifying the core context-selection logic.
+
+---
+
+# Current Limitations
+
+> **ContextPruner is currently a prototype intended for single-person usage.**
+
+### Single-user usage
+
+The current implementation is designed for one user working with the system at a time.
+
+### File locking
+
+File locking has **not yet been implemented**.
+
+Therefore:
+
+- Avoid editing the same file from multiple places simultaneously.
+- After external changes are made, refresh the application to ensure the displayed code is up to date.
+
+---
+
+# Using ContextPruner
+
+The main interface allows you to select the code and prompts that should be provided to an AI coding operation.
+
+The basic workflow is:
+
+```text
+Project
+   │
+   ├── Files / Directories
+   │
+   ├── Classes / Functions / Methods
+   │
+   └── Prompts
+          │
+          ▼
+     Selected Context
+          │
+          ▼
+      AI Operation
+          │
+          ▼
+      Review Changes
+```
+
+The hierarchical structure allows context to be selected at the level that is actually relevant to the task instead of always sending complete files or repositories.
+
+---
+
+# Frontend Usage
+
+Code and prompt context can be referenced through path-based expressions.
+
+## File
+
+To include an entire file:
+
+```text
+file:path/to/file
+```
+
+Example:
+
+```text
+file:backend/src/services/TreeNode.py
+```
+
+---
+
+## Directory
+
+To include a directory:
+
+```text
+file:path/to/folder
+```
+
+Example:
+
+```text
+file:backend/src/services/
+```
+
+This allows the directory and its supported children to be used as context.
+
+---
+
+## Classes and Functions
+
+Language parsers can expose language-specific children such as classes, functions, and methods.
+
+For example:
+
+```text
+file:path/to/file/classname
+```
+
+or:
+
+```text
+file:path/to/file/funcname
+```
+
+The exact child types available depend on the language parser.
+
+For example:
+
+```text
+file:example.py
+├── MyClass
+│   ├── __init__
+│   └── calculate
+└── helper_function
+```
+
+This allows context to be selected at a much smaller granularity than an entire file.
+
+---
+
+# Prompt Context
+
+Prompts can also be selected hierarchically.
+
+Use:
+
+```text
+prompt:prompt/hierarchy(key=value,...)
+```
+
+For example:
+
+```text
+prompt:coding/api_design(language=python,style=rest)
+```
+
+Prompts can be organized and maintained through the prompt manager.
+
+Available through:
+
+- `/prompt-manager`
+- **Manage Prompts** in the top navigation bar
+
+---
+
+# Context Selection
+
+The main purpose of the hierarchical model is to provide an AI with only the information required for an operation.
+
+Instead of:
+
+```text
+Entire Repository
+        │
+        ▼
+       AI
+```
+
+the developer can select:
+
+```text
+backend/
+└── src/
+    └── services/
+        └── TreeNode.py
+            └── File
+                └── load_children()
+```
+
+Only the selected portion of the code needs to become part of the operation's context.
+
+This provides:
+
+- lower unnecessary token usage
+- more focused AI context
+- clearer scope of the requested change
+- better developer control over what the AI sees
+
+---
+
+# Node Operations
+
+The hierarchical code tree is exposed through a Socket.IO path-based operation interface.
+
+A node can be addressed using:
+
+```text
+<node-path>/<operation>
+```
+
+For example:
+
+```text
+backend/src/services/TreeNode.py/children
+backend/src/services/TreeNode.py/script
+backend/src/services/TreeNode.py/edit_script
+```
+
+The server resolves the path against the current session's root `TreeNode` and dispatches the requested operation to the target node.
+
+---
+
+## Supported Operations
+
+### `script`
+
+Returns the generated/source representation of the target node.
+
+```text
+<node-path>/script
+```
+
+Internally:
+
+```python
+target_node.get_script()
+```
+
+---
+
+### `children`
+
+Returns the direct children of the target node.
+
+```text
+<node-path>/children
+```
+
+or:
+
+```text
+<node-path>/$children()
+```
+
+Internally:
+
+```python
+target_node.get_children()
+```
+
+---
+
+### `$children-recursive()`
+
+Traverses the target node recursively.
+
+```text
+<node-path>/$children-recursive()
+```
+
+Internally:
+
+```python
+target_node.get_children_recursive()
+```
+
+---
+
+### `edit_script`
+
+Updates the script associated with the target node.
+
+```text
+<node-path>/edit_script
+```
+
+Requires:
+
+```json
+{
+    "new_script": "..."
+}
+```
+
+The operation is performed through the `TreeNode` interface rather than directly manipulating the underlying file.
+
+---
+
+### `add_child`
+
+Adds a new child node to the target node.
+
+```text
+<node-path>/add_child
+```
+
+Requires:
+
+```json
+{
+    "child_node": {
+        "name": "Example",
+        "script": "...",
+        "dead_end": false,
+        "language": "python"
+    }
+}
+```
+
+The server creates a `TreeNode` from the supplied information and adds it to the target node.
+
+---
+
+### `delete_child`
+
+Removes a child from the target node.
+
+```text
+<node-path>/delete_child
+```
+
+Requires:
+
+```json
+{
+    "child_name": "Example"
+}
+```
+
+The child is removed through the target node's tree API.
+
+---
+
+# Node Operation Flow
+
+The path-based operation system follows this flow:
+
+```text
+Socket.IO Request
+       │
+       ▼
+Session Root
+       │
+       ▼
+Resolve Node Path
+       │
+       ▼
+Target TreeNode
+       │
+       ▼
+Dispatch Operation
+       │
+       ├── script
+       ├── children
+       ├── $children()
+       ├── $children-recursive()
+       ├── edit_script
+       ├── add_child
+       └── delete_child
+       │
+       ▼
+Socket.IO Response
+```
+
+The Socket.IO layer handles:
+
+- session validation
+- path resolution
+- operation validation
+- input validation
+- operation dispatch
+- response generation
+
+`TreeNode` remains responsible for the actual tree behavior.
+
+This keeps the transport layer separate from the underlying tree implementation.
+
+---
+
+# Architecture
+
+ContextPruner is built around three major concepts:
+
+```text
+                ContextPruner
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+        ▼            ▼            ▼
+   Code Tree    Prompt Tree   Editing / Review
+        │            │
+        ▼            ▼
+    TreeNode      PromptNode
+        │
+        ▼
+   Node Operations
+```
+
+---
+
+## Code Tree
+
+The codebase is represented as a hierarchical `TreeNode` structure.
+
+```text
+TreeNode
+├── Folder
+│   └── File
+└── Custom Nodes
+```
+
+The core abstractions are:
+
+- `TreeNode` — Base structure for hierarchical nodes.
+- `Folder` — Represents physical directories.
+- `File` — Represents physical source files.
+- Custom nodes — Represent language-specific or application-specific structures.
+
+This hierarchy allows the system to traverse and select code at different levels of granularity.
+
+See:
+
+```text
+backend/src/services/README
+```
+
+for the detailed `TreeNode`, `Folder`, and `File` architecture.
+
+---
+
+# File and Language Architecture
+
+`File` acts as the base abstraction for source files and provides language-specific parser resolution.
+
+Language implementations extend `File`:
+
+```text
+File
+ │
+ ├── PythonFile
+ ├── JavaFile
+ ├── CppFile
+ └── ...
+```
+
+Language-specific parsers convert source code into the common `TreeNode` hierarchy:
+
+```text
+Source Code
+     │
+     ▼
+Language File
+     │
+     ▼
+Language Parser
+     │
+     ▼
+TreeNode hierarchy
+```
+
+Language parsers are registered through:
+
+```python
+File.LANGUAGE_HOOKS
+```
+
+For example:
+
+```text
+".py"      → PythonFile
+"py"       → PythonFile
+"python"   → PythonFile
+```
+
+This follows the **Open-Closed Principle**: adding a language should extend the system rather than require modifications to the core parser.
+
+See:
+
+```text
+backend/src/services/Languages/README
+```
+
+for the language extension guide.
+
+---
+
+# Prompt Tree
+
+Prompts are represented hierarchically so that prompt instructions can be selected and combined in a structured way.
+
+For example:
+
+```text
+coding/
+├── api_design/
+├── frontend/
+│   └── design/
+└── architecture/
+    ├── mvc/
+    └── IOC/
+```
+
+The prompt system separates prompt handling from its storage mechanism through a provider-based architecture.
+
+```text
+PromptLoader
+      │
+      ▼
+Provider
+      │
+      ├── load_data()
+      └── save_data()
+```
+
+New storage mechanisms can therefore be added without changing the core prompt-handling logic.
+
+See:
+
+```text
+backend/src/services/prompt/README
+```
+
+for the prompt provider architecture.
+
+---
+
+# Editing and Review
+
+ContextPruner separates **context selection** from **code modification**.
+
+A typical operation can therefore be viewed as:
+
+```text
+Select Context
+      │
+      ▼
+Provide Context to AI
+      │
+      ▼
+AI Generates Change
+      │
+      ▼
+Apply / Review Change
+      │
+      ▼
+Inspect Result
+```
+
+The `TreeNode` structure provides the underlying operations required to retrieve and modify individual nodes.
+
+This makes it possible to work with a class, method, function, or other supported node without treating the entire source file as the only unit of interaction.
+
+---
+
+# Project Structure
+
+The major service-level components are organized approximately as:
+
+```text
+backend/src/services/
+│
+├── TreeNode.py
+│
+├── Languages/
+│   ├── <language implementations>
+│   └── tests/
+│
+└── prompt/
+    ├── PromptLoader
+    ├── providers/
+    └── loader_factory
+```
+
+The project is divided so that:
+
+```text
+TreeNode
+   │
+   ├── Code representation
+   ├── Tree traversal
+   └── Node operations
+
+Languages
+   │
+   └── Language-specific parsing
+
+Prompt
+   │
+   └── Prompt loading/storage
+```
+
+Detailed implementation and extension rules are documented within the corresponding modules.
+
+---
+
+# Extensibility
+
+ContextPruner is designed around **extension rather than modification**.
+
+## Adding a Language
+
+A new language should:
+
+1. Create a language module under:
+
+```text
+backend/src/services/Languages/<language>/
+```
+
+2. Implement:
+
+```text
+<Language>File(File)
+```
+
+3. Implement `load_children()`.
+
+4. Convert the language's parsed structure into `TreeNode` objects.
+
+5. Add custom `TreeNode` types only when required.
+
+6. Register the language through:
+
+```python
+File.LANGUAGE_HOOKS
+```
+
+7. Add language-specific tests.
+
+See:
+
+```text
+backend/src/services/Languages/README
+```
+
+for the complete procedure and constraints.
+
+---
+
+## Adding a Prompt Provider
+
+A new prompt storage backend should implement:
+
+```text
+BasePromptProvider
+```
+
+with the required provider operations and then be registered through the prompt loader factory.
+
+See:
+
+```text
+backend/src/services/prompt/README
+```
+
+for the complete procedure.
+
+---
+
+# Design Principles
+
+The architecture primarily relies on separation of responsibilities and extension points.
+
+### Open-Closed Principle
+
+Language support is added through registered parser implementations rather than modifications to the core parser.
+
+```text
+Core
+├── TreeNode
+├── File
+└── LANGUAGE_HOOKS
+        ▲
+        │
+        └── Language Extensions
+```
+
+### Separation of Concerns
+
+Different responsibilities remain in their respective layers:
+
+```text
+TreeNode
+    → tree structure and operations
+
+Language modules
+    → source parsing
+
+Prompt providers
+    → prompt storage
+
+Socket.IO layer
+    → transport and operation dispatch
+
+Frontend
+    → context selection and interaction
+```
+
+This keeps individual components focused and makes extensions easier to implement.
+
+---
+
+# Documentation
+
+Detailed documentation is available at the module level:
+
+| Documentation | Purpose |
+|---|---|
+| `backend/src/services/README` | `TreeNode`, `Folder`, `File`, traversal, and node architecture |
+| `backend/src/services/Languages/README` | How to add a new language/parser |
+| `backend/src/services/prompt/README` | How to add a new prompt storage provider |
+
+Use this README for the project-level architecture and workflow.
+
+Use the module README when modifying or extending a specific subsystem.
+
+---
+
+# Development Notes
+
+ContextPruner is currently a **prototype**.
+
+When working on the project:
+
+1. Keep language-specific parsing inside language modules.
+2. Keep prompt storage logic inside providers.
+3. Keep tree behavior inside `TreeNode` and its subclasses.
+4. Keep Socket.IO handlers focused on transport, validation, and dispatch.
+5. Prefer extending existing abstractions over adding implementation-specific logic to the core.
+6. Refresh the application after external file changes.
+7. Avoid simultaneous edits to the same file until file locking is implemented.
+
+---
+
+# Core Idea
+
+ContextPruner is built around a simple principle:
+
+> **Give the AI exactly the context it needs, while keeping the developer in control of what is provided and what is changed.**
+
+Instead of treating a repository as one large block of context, ContextPruner represents it as a hierarchy:
+
+```text
+Repository
+    │
+    ├── Directory
+    │    └── File
+    │         └── Class
+    │              └── Method
+    │
+    └── Prompts
+         └── Prompt Hierarchy
+```
+
+That hierarchy can be:
+
+- **traversed**
+- **selected**
+- **read**
+- **modified**
+- **reviewed**
+
+through a common `TreeNode` model and its path-based operation interface.
+
+The result is a system for **granular AI context selection, controlled code editing, and clearer review of AI-generated changes**.

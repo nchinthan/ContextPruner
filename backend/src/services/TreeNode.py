@@ -278,7 +278,7 @@ class Folder(TreeNode):
 
 class File(TreeNode):
     LANGUAGE_HOOKS = {}
-    def __new__(cls, path_str: str, language: str = "python"):
+    def __new__(cls, path_str: str, language: str ):
         """
         Factory pattern: Inspects the file type and returns an instance
         of the specialized subclass.
@@ -291,7 +291,7 @@ class File(TreeNode):
         if language in File.LANGUAGE_HOOKS:
             return super().__new__(File.LANGUAGE_HOOKS[language])
         
-        return super().__new__(File) # type: ignore
+        return super().__new__(File) 
 
     def __init__(self, path_str: str, language: str = "unknown"):
         self.path = Path(path_str)
@@ -313,7 +313,3 @@ class File(TreeNode):
         self.path.write_text(compiled_script, encoding="utf-8")
 
 
-if __name__ == '__main__':
-    base = File(r'D:\projects_current\Coding_prompt_builder\TreeNode.py')
-    (base.load_children())
-    print(base.children)

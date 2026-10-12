@@ -1,0 +1,229 @@
+# TreeNode Architecture Documentation
+
+The `TreeNode` module provides a hierarchical, object-oriented tree structure for traversing, lazy-loading, modifying, and serializing node-based trees.
+
+It includes specialized subclasses like `Folder` and `File` that mirror physical file systems directly onto the tree structure while synchronizing modifications with disk storage.
+
+---
+
+## Architecture Overview
+
+```text
+                  ┌─────────────────┐
+                  │    TreeNode     │
+                  │ Abstract / Base │
+                  │      Node       │
+                  └────────┬────────┘
+                           │
+         ┌─────────────────┴─────────────────> [ PromptNode / Custom Nodes ]
+         │
+    ┌────┴────┐
+    │ Folder  │
+    │Directory│
+    │  Node   │
+    └────┬────┘
+         │
+     ┌───┴───┐
+     │ File  │
+     │ Leaf /│
+     │Terminal│
+     │  Node  │
+     └───────┘
+```
+
+### Node Responsibilities
+
+| Class | Responsibility |
+|---|---|
+| `TreeNode` | Base tree structure, traversal, relationships, lazy loading, and state management |
+| `Folder` | Represents a physical directory and synchronizes tree operations with disk |
+| `File` | Represents a physical file and synchronizes file contents with disk |
+| `PromptNode / Custom Nodes` | Specialized tree nodes built on top of `TreeNode` |
+
+---
+
+# Core Classes
+
+## 1. `TreeNode` — Base Class
+
+The foundational building block for any tree structure.
+
+It manages:
+
+- Parent-child relationships
+- Lazy loading
+- Path traversal
+- Script templates
+- Node state management
+
+### Key Attributes
+
+| Attribute | Description |
+|---|---|
+| `name` | Identifier for the node |
+| `script` | The text content or script payload associated with the node |
+| `dead_end` | Boolean flag indicating if the node cannot or should not have children |
+| `leaf` | Boolean flag representing whether the node currently has no loaded children |
+| `language` | Code or content language format identifier |
+| `children` | List containing direct child `TreeNode` instances |
+
+### Key Methods
+
+| Method | Description |
+|---|---|
+| `get_children() -> list[str]` | Returns names of direct children, triggering lazy loading if needed |
+| `get_children_recursive(prefix="") -> list[str]` | Recursively returns relative paths of all descendants |
+| `get_script() -> str` | Returns the node script, or dynamically aggregates and concatenates scripts from all child nodes if it's a branch |
+| `get(path: list) -> TreeNode` | Recursively traverses a list of path names to locate and return a target node |
+| `set(path: list, new_script: str) -> bool` | Locates a node by path and updates its script text |
+| `add_child(path: list, child_node: TreeNode) -> bool` | Navigates to a target parent path and appends a child node |
+| `delete_child(path: list) -> bool` | Locates and removes a child node by path |
+
+---
+
+## 2. `Folder` — `TreeNode` Subclass
+
+A directory-level node that maps directly to a physical folder on your disk.
+
+### Behavior & Specializations
+
+- Scans disk contents dynamically via `load_children()` when accessed.
+- Automatically instantiates subdirectories as `Folder` objects and files as `File` objects based on file extensions.
+
+### Disk Synchronization
+
+`Folder` overrides `add_child()` and `delete_child()` so that operations performed on the tree structure are **physically executed on disk**.
+
+This includes:
+
+- Creating directories
+- Writing files
+- Recursively deleting directories via `shutil.rmtree`
+
+---
+
+## 3. `File` — `TreeNode` Subclass
+
+A terminal file node representing a physical file on disk.
+
+### Behavior & Specializations
+
+- Automatically reads the file contents into `self.script` upon initialization using UTF-8 encoding.
+- Uses a **Factory Pattern** through `__new__`.
+- Inspects file extensions (`path.suffix`) or language specifications.
+- Checks against `File.LANGUAGE_HOOKS`.
+- Allows custom subclasses to parse specific file types, such as:
+  - Python parsers
+  - JSON parsers
+
+### `save()`
+
+Compiles the tree state back to text and flushes updates directly to disk.
+
+---
+
+# Usage Guide & Examples
+
+## Example 1: Traversing and Inspecting a File System Tree
+
+You can mount a root folder to inspect its directory structure, read nested scripts, or locate specific nodes.
+
+```python
+from backend.src.services.TreeNode import Folder
+
+# Initialize root folder
+project_root = Folder("./backend")
+
+# Get list of immediate children names
+print(project_root.get_children())
+
+# Recursively list all nested file paths
+all_paths = project_root.get_children_recursive()
+print(all_paths)
+```
+
+---
+
+## Example 2: Navigating and Updating Nodes via Paths
+
+You can query or modify specific nodes by supplying a list representing the path hierarchy.
+
+```python
+# Find a specific nested node
+target_node = project_root.get([
+    "src",
+    "services",
+    "TreeNode.py"
+])
+
+if target_node:
+    print(target_node.get_script())
+
+# Update a node's script text programmatically
+success = project_root.set(
+    ["src", "services", "TreeNode.py"],
+    "# Updated script content"
+)
+```
+
+The path:
+
+```text
+["src", "services", "TreeNode.py"]
+```
+
+represents:
+
+```text
+project_root
+└── src
+    └── services
+        └── TreeNode.py
+```
+
+---
+
+## Example 3: Physically Adding and Deleting Files via Folders
+
+Because `Folder` overrides modification methods to synchronize with disk storage, adding or deleting children updates your filesystem automatically.
+
+```python
+from backend.src.services.TreeNode import File, Folder
+
+root_folder = Folder("./data")
+
+# Create a new file node and add it to a subpath.
+# This physically creates the directories and writes
+# the file to disk.
+new_file = File(
+    "./data/snippets/intro.txt",
+    language="txt"
+)
+
+root_folder.add_child(
+    ["snippets"],
+    new_file
+)
+
+# Physically delete a file or folder from disk and memory.
+root_folder.delete_child(
+    ["snippets", "intro.txt"]
+)
+```
+
+---
+
+# Summary
+
+The `TreeNode` architecture provides a common abstraction for hierarchical data while allowing specialized implementations to define how nodes are loaded, modified, and persisted.
+
+```text
+TreeNode
+   │
+   ├── Folder
+   │    └── File
+   │
+   └── PromptNode / Custom Nodes
+```
+
+This allows the same tree traversal and manipulation model to be reused across different types of hierarchical data.

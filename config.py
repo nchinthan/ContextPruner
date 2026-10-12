@@ -1,1 +1,1 @@
-prompt_snippet_file = './data/prompts.json'
+prompt_data_json_loc = './data/prompts.json'

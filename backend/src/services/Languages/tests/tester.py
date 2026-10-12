@@ -1,36 +1,16 @@
-# File: Languages/js/test/run_tests.py
+# File: backend/src/services/Languages/tests/tester.py
 import sys
 import json
-import difflib
 from pathlib import Path
 
-# Add project root to path so modules can be imported
-js_test_dir = Path(__file__).parent.resolve()
-js_nodes_dir = js_test_dir.parent
-root_dir = js_nodes_dir.parent.parent
+# Determine project root directory
+tester_dir = Path(__file__).parent.resolve()
+# Adjust based on depth: backend/src/services/Languages/tests -> root
+root_dir = tester_dir.parent.parent.parent.parent
 
-sys.path.insert(0, str(root_dir))
-sys.path.insert(0, str(js_nodes_dir))
+from backend.src.services.TreeNode import File 
 
-from backend.src.services.Languages.js import File, init as init_js_nodes
-
-# Register language hooks
-init_js_nodes()
-##################################
-# file = File("D:/projects_current/chowka bara/ui.js")
-# sys.stdout = open(js_test_dir / 'output.txt', 'w')
-
-# file.load_children()
-# exit()
-####################################
-
-
-def normalize_code(code: str) -> str:
-    """charactar stream as any amount of space doesnt give much effect on js output"""
-    return ''.join(code.split())
-
-
-def run_reconstruction_test(test_config: dict) -> tuple[bool, str | None]:
+def run_reconstruction_test(test_config: dict, root_dir: Path, normalize_code) -> tuple[bool, str | dict | None]:
     file_path_str = test_config.get("file")
     parent_path = test_config.get("parent_path", [])
     
@@ -43,14 +23,14 @@ def run_reconstruction_test(test_config: dict) -> tuple[bool, str | None]:
         print(f"❌ FAIL: {msg}")
         return False, msg
 
-    # Instantiate JSFile without writing or modifying files
-    js_file = File(str(file_path))
+    # Instantiate File object for the target language
+    file_obj = File(str(file_path))
 
     # Determine target node based on parent_path
     if not parent_path:
-        target_node = js_file
+        target_node = file_obj
     else:
-        target_node = js_file.get(parent_path)
+        target_node = file_obj.get(parent_path)
         if target_node is None:
             msg = f"Path {parent_path} not found in {file_path.name}"
             print(f"❌ FAIL: {msg}")
@@ -59,26 +39,36 @@ def run_reconstruction_test(test_config: dict) -> tuple[bool, str | None]:
     # Extract original code segment or entire file
     original_script = target_node.get_script() 
     
-    target_node.load_children() # load children forces get script to construct script from children 
+    # Load children forces reconstruction from children nodes
+    target_node.load_children() 
     
-    # Trigger dynamic reconstruction via children
+    # Trigger dynamic reconstruction
     reconstructed_script = target_node.get_script()
 
     norm_original = normalize_code(original_script)
     norm_reconstructed = normalize_code(reconstructed_script)
 
     if norm_original == norm_reconstructed:
-        target_desc = f"path '{' -> '.join(parent_path)}'" if parent_path else "Full File"
-        print(f"✅ PASS: [{file_path.name}] ({target_desc}) reconstructed from ({len(target_node.children)})")
+        target_desc = f"path '{' -> '.join(map(str, parent_path))}'" if parent_path else "Full File"
+        print(f"✅ PASS: [{file_path.name}] ({target_desc}) reconstructed from ({len(target_node.children)}) children")
         return True, None
     else:
         print(f"❌ FAIL Reconstruction Mismatch: [{file_path.name}] (Path: {parent_path})")
-        return False, {'original_script':original_script,'reconstructed_script':reconstructed_script}
+        return False, {
+            'original_script': original_script,
+            'reconstructed_script': reconstructed_script
+        }
 
 
-def main():
-    config_file = js_test_dir / "tests.json"
+def run_test_suite(language_name: str, init_fn, normalize_code, data_dir: Path = None):
+    """Universal runner for any registered language test suite."""
+    if init_fn:
+        init_fn()
+
+    if data_dir is None:
+        data_dir = tester_dir / "data" / language_name
     
+    config_file = data_dir / "tests.json"
     if not config_file.exists():
         print(f"Error: Test configuration file not found at {config_file}")
         sys.exit(1)
@@ -86,7 +76,7 @@ def main():
     with open(config_file, "r", encoding="utf-8") as f:
         tests = json.load(f)
 
-    print(f"Running {len(tests)} test(s) from tests.json...\n")
+    print(f"Running {len(tests)} test(s) for language '{language_name}' from {config_file}...\n")
     
     passed = []
     failed = []
@@ -94,7 +84,7 @@ def main():
     for idx, test in enumerate(tests, 1):
         test_type = test.get("type")
         if test_type == "reconstruction":
-            status, diff = run_reconstruction_test(test)
+            status, diff = run_reconstruction_test(test, root_dir, normalize_code)
             if status:
                 passed.append(test.get('file'))
             else:
@@ -106,19 +96,18 @@ def main():
         else:
             print(f"⚠️ SKIPPED: Unknown test type '{test_type}' in test #{idx}")
 
-    print(f"\nResults: {len(passed)} Passed, {len(failed)} Failed.")
+    print(f"\nResults for [{language_name.upper()}]: {len(passed)} Passed, {len(failed)} Failed.")
     
     output = {
+        'language': language_name,
         'passed': passed, 
         'failed': failed
     }
-    with open(js_test_dir / 'result.json', 'w', encoding="utf-8") as fp: 
+    
+    result_file = data_dir / 'result.json'
+    with open(result_file, 'w', encoding="utf-8") as fp: 
         json.dump(output, fp, indent=2)
-        print('output to',js_test_dir / 'result.json')
+        print(f"Output written to {result_file}")
      
     if len(failed) > 0:
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
